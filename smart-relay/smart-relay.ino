@@ -37,8 +37,8 @@ int warning_interval_value = 0;
 int start_indicator = 1;
 
 //Blynk config
-char auth[] = ""; //token from Blynk application
-char ssid[] = ""; //wifi name
+char auth[] = "y-clyEm3FG-9jUOmSZgDg6uagBV-b61t"; //token from Blynk application
+char ssid[] = "Borey R-J37"; //wifi name
 char pass[] = ""; //wifi password
 
 void setup(void) {
@@ -50,49 +50,48 @@ void setup(void) {
   pinMode(RELAY, OUTPUT); //allow power to ralay pin
   pinMode(LED, OUTPUT); //allow power to ralay pin
 
-  Serial.println("--Smart Farm Project!--"); //Test the serial monitor
+  Serial.println("--Smart Relay Project!--"); //Test the serial monitor
 
-  EEPROM.begin(32);
-  Blynk.begin(auth, ssid, pass);
+  EEPROM.begin(32);//start the eeprom
+  Blynk.begin(auth, ssid, pass);//connect to blynk cloud server
 }
 
 
 BLYNK_WRITE(V3) {
   min_temp = param.asInt(); // Gets the value stored in V2 as an integer
-  Serial.println("I Make chnage min_temp");
-  digitalWrite(RELAY, LOW);
-  relay_led.off();
+  digitalWrite(RELAY, LOW); //reset relay state everytime treshold change to prevent relay error
+  relay_led.off(); //reset LED state
   interval = 0;
 }
 
 
 BLYNK_WRITE(V4) {
   max_temp = param.asInt(); // Gets the value stored in V2 as an integer
-  Serial.println("I Make chnage max_temp");
-  digitalWrite(RELAY, LOW);
-  relay_led.off();
+  digitalWrite(RELAY, LOW); //reset relay state everytime treshold change to prevent relay error
+  relay_led.off(); //reset LED state
   interval = 0;
 }
 
 
 BLYNK_WRITE(V5) {
-  warning_interval_value = param.asInt() * 60; // Gets the value stored in V2 as an integer
+  warning_interval_value = param.asInt(); // Gets the value stored in V2 as an integer
 }
 
 
 void loop(void) {
-  Blynk.run();
+  Blynk.run(); //start blynk
 
   //get data from EEPROM on start
   if (start_indicator == 1) {
+    //read value rom eeprom
       min_temp = EEPROM.read(0);
       max_temp = EEPROM.read(1);
-      warning_interval_value = EEPROM.read(2);
-
+      warning_interval_value = EEPROM.read(3);
+    //rewrite the value from eeprom to blynk
       Blynk.virtualWrite(MIN_TEMP_PIN, min_temp);
       Blynk.virtualWrite(MAX_TEMP_PIN, max_temp);
       Blynk.virtualWrite(WARNING_INTERVAL_VALUE_PIN, warning_interval_value);
-
+    //debuging mode
       start_indicator = 0;
       Serial.print("EEPROM Min ---- ");
       Serial.println(min_temp);
@@ -113,7 +112,7 @@ void loop(void) {
 
   EEPROM.put(0, min_temp);
   EEPROM.put(1, max_temp);
-  EEPROM.put(2, warning_interval_value);
+  EEPROM.put(3, warning_interval_value);
   EEPROM.commit();
 
   if (tempValue <= min_temp) //open relay = stop operation
@@ -127,7 +126,7 @@ void loop(void) {
     Serial.println(interval);
     Serial.println(warning_interval_value);
     interval += 1;
-    if (interval == warning_interval_value) {
+    if (interval == warning_interval_value * 60) {
       Blynk.notify("Warning!! relay was ON for: " + String(interval) + "mins, operation will be stop automatically.");
       interval = 0;
       digitalWrite(RELAY, LOW);
